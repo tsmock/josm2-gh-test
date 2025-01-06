@@ -68,7 +68,7 @@ jobs:
       fail-fast: false
       matrix:
         # test against latest update of each major Java version, as well as specific updates of LTS versions:
-        java: [11, 17, 21, 22]
+        java: [11, 17, 21, 23]
         os: [ubuntu-latest, macos-latest, windows-latest]
     name: Java ${{ matrix.java }} on ${{ matrix.os }}
     steps:
@@ -194,7 +194,44 @@ jobs:
           fi
           unzip tools/openjfx-${JAVAFX_VERSION}_${{ runner.os }}-jmods.zip
           mv javafx-jmods-${JAVAFX_VERSION}/*.jmod $JAVA_HOME/jmods/
+          # Create msi and exe packages
           ./native/windows/win-jpackage.sh ${{ needs.createrelease.outputs.josm_revision }}
+          # Create template file
+          cat <<EOF > ConversionTemplate.xml
+          <MsixPackagingToolTemplate
+            xmlns="http://schemas.microsoft.com/appx/msixpackagingtool/template/2018">
+            <Settings
+              AllowTelemetry="true"
+              ApplyAllPrepareComputerFixes="true"
+              GenerateCommandLineFile="true"
+              AllowPromptForPassword="false"
+              EnforceMicrosoftStoreVersioningRequirements="true"/>
+            <SaveLocation PackagePath="josm.msix" TemplatePath="ConversionTemplate.xml"/>
+            <Installer Path="app/JOSM.msi" InstallLocation="C:/Users/$(whoami)/AppData/Local/JOSM" />
+            <PackageInformation
+              PackageName="JOSM"
+              PackageDisplayName="JOSM"
+              PublisherName="CN=JOSM"
+              PublisherDisplayName="JOSM"
+              Version="${{ needs.createrelease.outputs.josm_release_tag }}"
+              MainPackageNameForModificationPackage="JOSM">
+              <Applications>
+                <Application
+                  Id="JOSM"
+                  Description="JOSM"
+                  DisplayName="JOSM"
+                  ExecutableName="JOSM.exe"/>
+                <Application
+                  Id="JOSM (Debug)"
+                  Description="JOSM (Debug)"
+                  DisplayName="JOSM (Debug)"
+                  ExecutableName="JOSM (Debug).exe"/>
+              </Applications>
+            </PackageInformation>
+          </MsixPackagingToolTemplate>
+          EOF
+          # Create msix package
+          MsixPackagingTool.exe create-package --template ConversionTemplate.xml --verbose
 
       - name: Upload macOS app
         if: ${{ runner.os == 'macos' && matrix.java != '11' && always() && needs.createrelease.outputs.upload_url }}
