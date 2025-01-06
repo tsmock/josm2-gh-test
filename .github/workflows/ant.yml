@@ -182,6 +182,13 @@ jobs:
           echo "C:\Program Files (x86)\Windows Kits\10\bin\x64" >> $GITHUB_PATH
           echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit" >> $GITHUB_PATH
 
+      - name: Install msix packaging tool for Windows
+        if: ${{ runner.os == 'windows' && matrix.java != '11' && always() }}
+        shell: pwsh
+        run: |
+          # Install msix packaging tool (1.2024.405.0 -- see https://learn.microsoft.com/en-us/windows/msix/packaging-tool/tool-overview#install )
+          curl -LO https://download.microsoft.com/download/e/2/e/e2e923b2-7a3a-4730-969d-ab37001fbb5e/MSIXPackagingtoolv1.2024.405.0.msixbundle
+          Add-AppxPackage -Path MSIXPackagingtoolv1.2024.405.0.msixbundle
       - name: Build and package for Windows
         if: ${{ runner.os == 'windows' && matrix.java != '11' && always() }}
         env:
@@ -231,7 +238,6 @@ jobs:
           </MsixPackagingToolTemplate>
           EOF
           # Create msix package
-          winget install "MSIX Packaging Tool"
           MsixPackagingTool.exe create-package --template ConversionTemplate.xml --verbose
 
       - name: Upload macOS app
