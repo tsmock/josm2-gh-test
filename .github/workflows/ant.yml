@@ -231,6 +231,7 @@ jobs:
           </MsixPackagingToolTemplate>
           EOF
           # Create msix package
+          winget install "MSIX Packaging Tool"
           MsixPackagingTool.exe create-package --template ConversionTemplate.xml --verbose
 
       - name: Upload macOS app
